@@ -3,20 +3,12 @@ import random as r
 from enum import Enum
 from functools import cmp_to_key
 
-"""
-TODOs:
-    1. make card comparison take trump suit into account
-    2. add opponent card playing logic
-    3. add logic to not allow trump suit unbroken
-    4. add logic to not allow not following suit
-    5. add battle stage logic
-"""
-
 # global vars
 deck = []
 player_cards = []
 opponent_cards = []
 trump_suit = None
+broken = False # if trump suit has been broken yet
 stage = 'BUILD'
 
 # suit
@@ -25,7 +17,7 @@ class Suit(Enum):
     HEART = 1
     CLUB = 2
     DIAMOND = 3
-Suit = Enum('Suit', ['SPADE', 'HEART', 'DIAMOND', 'CLUB'])
+Suit = Enum('Suit', ['SPADE', 'HEART', 'CLUB', 'DIAMOND'])
 
 """
 Ace = 1, Jack = 11, Queen = 12, King = 13
@@ -73,6 +65,32 @@ def print_hand():
         print(f"{str(card)}")
     print("")
 
+# return a list of integers associated with the card index to play
+def get_valid_indicies(hand, card_on_table = None):
+    valid_indicies = []
+    if not hand:
+        return valid_indicies
+    # valid starting moves are all suits except trump if unbroken, otherwise all suits
+    if not card_on_table:
+        for i in range(len(hand)):
+            card = hand[i]
+            if card.suit == trump_suit:
+                if broken:
+                    valid_indicies.append(i)
+            else:
+                valid_indicies.append(i)
+    # a valid second move is following suit if hand contains it, otherwise any suit
+    else:
+        for i in range(len(hand)):
+            card = hand[i]
+            if card.suit == card_on_table.suit:
+                valid_indicies.append(i)
+        # if there were no cards of same suit as card_on_table
+        if not valid_indicies:
+            valid_indicies = [x for x in range(len(hand))]
+    return valid_indicies
+
+
 """
 1. create deck
 2. shuffle deck
@@ -89,9 +107,14 @@ def draw_card(card):
     print(f"\nCard on pile: {str(card)}")
 
 def get_opponent_input(card = None):
-    if not card:
-        return opponent_cards.pop()
-    return opponent_cards.pop()
+    global opponent_cards
+    valid_indicies = get_valid_indicies(opponent_cards, card)
+    # for now just pick a random valid move
+    index = r.randrange(len(valid_indicies))
+    card_to_play = opponent_cards[index]
+    opponent_cards = opponent_cards[0:index] + opponent_cards[index+1:]
+    return card_to_play
+
 
 def get_player_input(card = None):
     print_hand()
@@ -103,7 +126,6 @@ def get_player_input(card = None):
 
 def did_player_win(pc, oc):
     return oc < pc
-
 
 def main():
     parser = argparse.ArgumentParser(description='German whist, 2 or 1 player')
@@ -129,7 +151,7 @@ def main():
         build round
         1. draw card
         2. get player / cpu input
-        3. compare, add 
+        3. compare, add cards to hands
         battle round
         1. first player picks a card
         2. card is shown
@@ -139,8 +161,11 @@ def main():
         if stage == "BUILD":
             if deck:
                 card = deck.pop()
+                print(card.val)
+                print(card.suit)
                 if not trump_suit:
                     trump_suit = card.suit
+                    print(f"trump suit is {trump_suit.name}S")
                 draw_card(card)
                 # get inputs
                 if turn == 0:
