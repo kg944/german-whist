@@ -29,8 +29,8 @@ class Card:
 
     def __str__(self):
         symbols = ['\u2664', '\u2661', '\u2667', '\u2662']
-        values = ['A', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
-        return f"{values[self.val]}{symbols[self.suit.value - 1]}"
+        values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+        return f"{symbols[self.suit.value - 1]} {values[self.val - 1]}"
 
     def __eq__(self, other):
         return self.suit == other.suit and self.val == other.val
@@ -61,8 +61,23 @@ def print_hand():
     global player_cards
     # custom sort for view order not value order
     player_cards = sorted(player_cards, key=cmp_to_key(lambda item1, item2: visual_compare(item1, item2)))
-    for card in player_cards:
-        print(f"{str(card)}")
+    for i in range(len(player_cards)):
+        card = player_cards[i]
+        print(f"{str(i)}:\t{str(card)}")
+    print("")
+
+def print_hand_2():
+    global player_cards
+    # custom sort for view order not value order
+    player_cards = sorted(player_cards, key=cmp_to_key(lambda item1, item2: visual_compare(item1, item2)))
+    print("")
+    for i in range(len(player_cards)):
+        card = player_cards[i]
+        print(f"{str(card)}\t", end='')
+    print("")
+    # print indicies
+    for j in range(len(player_cards)):
+        print(f" {j}\t", end = '')
     print("")
 
 # return a list of integers associated with the card index to play
@@ -111,21 +126,36 @@ def get_opponent_input(card = None):
     valid_indicies = get_valid_indicies(opponent_cards, card)
     # for now just pick a random valid move
     index = r.randrange(len(valid_indicies))
-    card_to_play = opponent_cards[index]
+    card_to_play = opponent_cards[valid_indicies[index]]
     opponent_cards = opponent_cards[0:index] + opponent_cards[index+1:]
     return card_to_play
 
 
 def get_player_input(card = None):
-    print_hand()
-    selection = input()
     global player_cards
+    print_hand_2()
+    valid_indicies = get_valid_indicies(player_cards, card)
+    selection = None
+    # keep geting input until its valid
+    while selection is None or selection not in valid_indicies:
+        selection = int(input("choose a card:"))
     selected = player_cards[int(selection)]
     player_cards = player_cards[0:int(selection)] + player_cards[int(selection)+1:]
     return selected
 
-def did_player_win(pc, oc):
-    return oc < pc
+# true if pc beats oc
+def did_player_win(pc, oc, lead_suit):
+    if pc.suit == oc.suit:
+        return oc < pc
+    elif pc.suit == trump_suit:
+        return True
+    elif oc.suit == trump_suit:
+        return False
+    # if suits differ and neither player trump suit
+    else:
+        if pc.suit == lead_suit:
+            return True
+    return False
 
 def main():
     parser = argparse.ArgumentParser(description='German whist, 2 or 1 player')
@@ -146,26 +176,23 @@ def main():
     global player_cards
     global opponent_cards
     global trump_suit
+    global broken
+    player_pts = 0
+    opp_pts = 0
     while not won:
         """
         build round
         1. draw card
         2. get player / cpu input
         3. compare, add cards to hands
-        battle round
-        1. first player picks a card
-        2. card is shown
-        3. other player decides
-        4. cards distributed and points awarded
         """
         if stage == "BUILD":
             if deck:
                 card = deck.pop()
-                print(card.val)
-                print(card.suit)
                 if not trump_suit:
                     trump_suit = card.suit
-                    print(f"trump suit is {trump_suit.name}S")
+                print(f"trump suit is {trump_suit.name}S")
+                print(f"deck:{len(deck)}")
                 draw_card(card)
                 # get inputs
                 if turn == 0:
@@ -173,30 +200,79 @@ def main():
                     print(f"player played {str(pc)}")
                     oc = get_opponent_input(pc)
                     print(f"opponent played {str(oc)}")
+                    lead_suit = pc.suit
                 else:
-                    oc = get_opponent_card()
+                    oc = get_opponent_input()
                     print(f"opponent played {str(oc)}")
                     pc = get_player_input(oc)
                     print(f"player played {str(pc)}")
+                    lead_suit = oc.suit
+                # if one of the players broke trump suit
+                if (oc.suit == trump_suit or pc.suit == trump_suit) and not broken:
+                    print("***********")
+                    print("* BROKEN! *")
+                    print("***********")
+                    broken = True
                 # get winner
-                if did_player_win(pc, oc):
+                if did_player_win(pc, oc, lead_suit):
                     new_card = deck.pop()
                     print(f"player won {str(card)}")
-                    print(f"opp got {str(new_card)}")
+                    # print(f"opp got {str(new_card)}") # debug
                     player_cards.append(card)
                     opponent_cards.append(new_card)
+                    turn = 0
                 else:
                     new_card = deck.pop()
                     print(f"player got {str(new_card)}")
                     opponent_cards.append(card)
-                    print(f"opp won {str(card)}")
+                    # print(f"opp won {str(card)}") # debug
                     player_cards.append(new_card)
+                    turn = 1
             else:
                 stage = 'BATTLE'
-                print("implement battle !!!")
-                exit()
         else:
-            exit()
+            """
+            battle round
+            0. check if game over
+            1. first player picks a card
+            2. card is shown
+            3. other player decides
+            4. cards distributed and points awarded
+            """
+            # if game is over
+            if not player_cards or not opponent_cards:
+                print(f"player points: {player_pts}")
+                print(f"opponent points: {opp_pts}")
+                exit()
+            if turn == 0:
+                pc = get_player_input()
+                print(f"player played {str(pc)}")
+                oc = get_opponent_input(pc)
+                print(f"opponent played {str(oc)}")
+                lead_suit = pc.suit
+            else:
+                oc = get_opponent_input()
+                print(f"opponent played {str(oc)}")
+                pc = get_player_input(oc)
+                print(f"player played {str(pc)}")
+                lead_suit = oc.suit
+            # if one of the players broke trump suit
+            if (oc.suit == trump_suit or pc.suit == trump_suit) and not broken:
+                print("***************************")
+                print("* BROKEN in battle round! *")
+                print("***************************")
+                broken = True
+            # get winner
+            if did_player_win(pc, oc, lead_suit):
+                print("player won a point")
+                turn = 0
+                player_pts += 1
+                # print(f"opp got {str(new_card)}") # debug
+            else:
+                print("opponent won a point")
+                turn = 1
+                opp_pts += 1
+                # print(f"opp won {str(card)}") # debug
 
 
 if __name__ == '__main__':
