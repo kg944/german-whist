@@ -22,15 +22,21 @@ Suit = Enum('Suit', ['SPADE', 'HEART', 'CLUB', 'DIAMOND'])
 """
 Ace = 1, Jack = 11, Queen = 12, King = 13
 """
+def get_suit_unicode(suit):
+    symbols = ['\u2664', '\u2661', '\u2667', '\u2662']
+    return symbols[suit.value - 1]
+
 class Card:
     def __init__(self, suit, val):
         self.suit = suit
         self.val = val
 
-    def __str__(self):
-        symbols = ['\u2664', '\u2661', '\u2667', '\u2662']
+    def get_val_string(self):
         values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
-        return f"{symbols[self.suit.value - 1]} {values[self.val - 1]}"
+        return values[self.val - 1].rjust(2)
+
+    def __str__(self):
+        return f"{get_suit_unicode(self.suit)} {self.get_val_string()}"
 
     def __eq__(self, other):
         return self.suit == other.suit and self.val == other.val
@@ -157,6 +163,31 @@ def did_player_win(pc, oc, lead_suit):
             return True
     return False
 
+# display a card
+def display_card(card, draw_deck = False):
+    if draw_deck:
+        print("┌─────────┐┌─────────┐")
+        print(f"│         ││ {get_suit_unicode(card.suit)}       │")
+        print("│         ││         │")
+        print("│         ││         │")
+        print(f"│    {str(len(deck)).ljust(2)}   ││   {card.get_val_string()}    │")
+        print("│         ││         │")
+        print("│         ││         │")
+        print(f"│         ││      {get_suit_unicode(card.suit)}  │")
+        print("└─────────┘└─────────┘")
+    else:
+        print("┌─────────┐")
+        print(f"│ {get_suit_unicode(card.suit)}       │")
+        print("│         │")
+        print("│         │")
+        print(f"│   {card.get_val_string()}    │")
+        print("│         │")
+        print("│         │")
+        print(f"│      {get_suit_unicode(card.suit)}  │")
+        print("└─────────┘")
+
+
+
 def main():
     parser = argparse.ArgumentParser(description='German whist, 2 or 1 player')
     #parser.add_argument('num_players', type=str, help='number of players')
@@ -191,19 +222,20 @@ def main():
                 card = deck.pop()
                 if not trump_suit:
                     trump_suit = card.suit
-                print(f"trump suit is {trump_suit.name}S")
-                print(f"deck:{len(deck)}")
-                draw_card(card)
+                print(f"trump: {get_suit_unicode(trump_suit)}")
                 # get inputs
                 if turn == 0:
+                    display_card(card, True)
                     pc = get_player_input()
                     print(f"player played {str(pc)}")
                     oc = get_opponent_input(pc)
-                    print(f"opponent played {str(oc)}")
+                    # print(f"opponent played {str(oc)}")
                     lead_suit = pc.suit
                 else:
                     oc = get_opponent_input()
-                    print(f"opponent played {str(oc)}")
+                    # print(f"opponent played {str(oc)}")
+                    display_card(oc)
+                    display_card(card, True)
                     pc = get_player_input(oc)
                     print(f"player played {str(pc)}")
                     lead_suit = oc.suit
@@ -252,7 +284,7 @@ def main():
                 lead_suit = pc.suit
             else:
                 oc = get_opponent_input()
-                print(f"opponent played {str(oc)}")
+                display_card(oc, True)
                 pc = get_player_input(oc)
                 print(f"player played {str(pc)}")
                 lead_suit = oc.suit
