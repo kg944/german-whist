@@ -4,9 +4,10 @@ from enum import Enum
 from functools import cmp_to_key
 
 # global vars
+num_players = None
 deck = []
-player_cards = []
-opponent_cards = []
+p0_cards = []
+p1_cards = []
 trump_suit = None
 broken = False # if trump suit has been broken yet
 stage = 'BUILD'
@@ -52,9 +53,11 @@ class Card:
             return other.val < self.val
 
 def deal_cards():
+    global p0_cards
+    global p1_cards
     for i in range(13):
-        player_cards.append(deck.pop())
-        opponent_cards.append(deck.pop())
+        p0_cards.append(deck.pop())
+        p1_cards.append(deck.pop())
 
 # positive when c1 > c2
 # if diff suit compare on suit 'value' otherwise card val
@@ -64,27 +67,27 @@ def visual_compare(c1, c2):
     return c1.val - c2.val
 
 def print_hand():
-    global player_cards
+    global p0_cards
     # custom sort for view order not value order
-    player_cards = sorted(player_cards, key=cmp_to_key(lambda item1, item2: visual_compare(item1, item2)))
-    for i in range(len(player_cards)):
-        card = player_cards[i]
+    p0_cards = sorted(p0_cards, key=cmp_to_key(lambda item1, item2: visual_compare(item1, item2)))
+    for i in range(len(p0_cards)):
+        card = p0_cards[i]
         print(f"{str(i)}:\t{str(card)}")
     print("")
 
-def print_hand_2():
-    global player_cards
+def print_hand_2(cards):
     # custom sort for view order not value order
-    player_cards = sorted(player_cards, key=cmp_to_key(lambda item1, item2: visual_compare(item1, item2)))
+    cards = sorted(cards, key=cmp_to_key(lambda item1, item2: visual_compare(item1, item2)))
     print("")
-    for i in range(len(player_cards)):
-        card = player_cards[i]
+    for i in range(len(cards)):
+        card = cards[i]
         print(f"{str(card)}\t", end='')
     print("")
     # print indicies
-    for j in range(len(player_cards)):
+    for j in range(len(cards)):
         print(f" {j}\t", end = '')
     print("")
+    return cards
 
 # return a list of integers associated with the card index to play
 def get_valid_indicies(hand, card_on_table = None):
@@ -109,6 +112,8 @@ def get_valid_indicies(hand, card_on_table = None):
         # if there were no cards of same suit as card_on_table
         if not valid_indicies:
             valid_indicies = [x for x in range(len(hand))]
+    if not valid_indicies:
+        return [i for i in range(len(hand))]
     return valid_indicies
 
 
@@ -127,27 +132,25 @@ def start_game():
 def draw_card(card):
     print(f"\nCard on pile: {str(card)}")
 
-def get_opponent_input(card = None):
-    global opponent_cards
-    valid_indicies = get_valid_indicies(opponent_cards, card)
+def get_opponent_input(cards, card = None):
+    valid_indicies = get_valid_indicies(cards, card)
     # for now just pick a random valid move
     index = r.randrange(len(valid_indicies))
-    card_to_play = opponent_cards[valid_indicies[index]]
-    opponent_cards = opponent_cards[0:index] + opponent_cards[index+1:]
-    return card_to_play
+    card_to_play = cards[valid_indicies[index]]
+    cards = cards[0:index] + cards[index+1:]
+    return cards, card_to_play
 
 
-def get_player_input(card = None):
-    global player_cards
-    print_hand_2()
-    valid_indicies = get_valid_indicies(player_cards, card)
+def get_player_input(cards, card = None):
+    cards = print_hand_2(cards)
+    valid_indicies = get_valid_indicies(cards, card)
     selection = None
     # keep geting input until its valid
     while selection is None or selection not in valid_indicies:
         selection = int(input("choose a card:"))
-    selected = player_cards[int(selection)]
-    player_cards = player_cards[0:int(selection)] + player_cards[int(selection)+1:]
-    return selected
+    selected = cards[int(selection)]
+    cards = p0_cards[0:int(selection)] + p0_cards[int(selection)+1:]
+    return cards, selected
 
 # true if pc beats oc
 def did_player_win(pc, oc, lead_suit):
@@ -165,6 +168,8 @@ def did_player_win(pc, oc, lead_suit):
 
 # display a card
 def display_card(card, draw_deck = False, draw_trump = False):
+    if num_players == 0:
+        return
     trump_str = ""
     if draw_trump:
         trump_str = f"[trump: {get_suit_unicode(trump_suit)} ]"
@@ -189,22 +194,24 @@ def display_card(card, draw_deck = False, draw_trump = False):
         print(f"│      {get_suit_unicode(card.suit)}  │")
         print("└─────────┘")
 
-def main():
-    parser = argparse.ArgumentParser(description='German whist, 0 or 1 player')
-    #parser.add_argument('num_players', type=str, help='number of players')
-    #parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
-    args = parser.parse_args()
-    #if args.verbose:
-    #print(f"{args.num_players}")
 
+# only print if num_players > 0
+def pprint(s):
+    if num_players:
+        print(s)
+
+
+def play():
     won = False
     turn = 0 # 0 p0, 1 p1
+    # randomly select 
+    turn = r.randrange(2)
     start_game()
     player_pts = 0
     global stage
     global deck
-    global player_cards
-    global opponent_cards
+    global p0_cards
+    global p1_cards
     global trump_suit
     global broken
     player_pts = 0
@@ -225,43 +232,54 @@ def main():
                 # get inputs
                 if turn == 0:
                     display_card(card, draw_deck=True, draw_trump=True)
-                    pc = get_player_input()
-                    print(f"player played\t{str(pc)}")
-                    oc = get_opponent_input(pc)
-                    # print(f"opponent played {str(oc)}")
+                    if num_players == 1:
+                        p0_cards, pc = get_player_input(p0_cards)
+                    elif num_players == 0:
+                        p0_cards, pc = get_opponent_input(p0_cards)
+                    else:
+                        print(f"invalid num players: {num_players}")
+                    pprint(f"player played\t{str(pc)}")
+                    p1_cards, oc = get_opponent_input(p1_cards, pc)
+                    pprint(f"opponent played {str(oc)}")
                     lead_suit = pc.suit
                 else:
-                    oc = get_opponent_input()
+                    p1_cards, oc = get_opponent_input(p1_cards)
                     # print(f"opponent played {str(oc)}")
                     display_card(oc)
                     display_card(card, draw_deck=True, draw_trump=True)
-                    pc = get_player_input(oc)
-                    print(f"player played\t{str(pc)}")
+                    if num_players == 1:
+                        p0_cards, pc = get_player_input(p0_cards, oc)
+                    elif num_players == 0:
+                        p0_cards, pc = get_opponent_input(p0_cards, oc)
+                    else:
+                        print(f"invalid num players: {num_players}")
+                    pprint(f"player played\t{str(pc)}")
                     lead_suit = oc.suit
                 # if one of the players broke trump suit
                 if (oc.suit == trump_suit or pc.suit == trump_suit) and not broken:
-                    print("***********")
-                    print("* BROKEN! *")
-                    print("***********")
+                    pprint("***********")
+                    pprint("* BROKEN! *")
+                    pprint("***********")
                     broken = True
                 # get winner
                 if did_player_win(pc, oc, lead_suit):
                     new_card = deck.pop()
-                    print(f"player won\t{str(card)}")
+                    pprint(f"player won\t{str(card)}")
                     # print(f"opp got {str(new_card)}") # debug
-                    player_cards.append(card)
-                    opponent_cards.append(new_card)
+                    p0_cards.append(card)
+                    p1_cards.append(new_card)
                     turn = 0
                 else:
                     new_card = deck.pop()
-                    print(f"player got\t{str(new_card)}")
-                    opponent_cards.append(card)
+                    pprint(f"player got\t{str(new_card)}")
+                    p1_cards.append(card)
                     # print(f"opp won {str(card)}") # debug
-                    player_cards.append(new_card)
+                    p0_cards.append(new_card)
                     turn = 1
             else:
+                pprint('entering battle stage!!!!!!!!!')
                 stage = 'BATTLE'
-            print("")
+            pprint("")
         else:
             """
             battle round
@@ -272,41 +290,78 @@ def main():
             4. cards distributed and points awarded
             """
             # if game is over
-            if not player_cards or not opponent_cards:
-                print(f"player points:\t{player_pts}")
-                print(f"opponent points:\t{opp_pts}")
-                exit()
+            if not p0_cards or not p1_cards:
+                pprint("game over!")
+                pprint(f"p0 points:\t{player_pts}")
+                pprint(f"p1 points:\t{opp_pts}")
+                if player_pts == opp_pts:
+                    print("Error!")
+                    print(player_pts)
+                    print(opp_pts)
+                    exit(0)
+                return player_pts > opp_pts
             if turn == 0:
-                pc = get_player_input()
-                print(f"player played\t{str(pc)}")
-                oc = get_opponent_input(pc)
-                print(f"opponent played\t{str(oc)}")
+                if num_players == 1:
+                    p0_cards, pc = get_player_input(p0_cards)
+                elif num_players == 0:
+                    p0_cards, pc = get_opponent_input(p0_cards)
+                else:
+                    pprint(f"invalid num players: {num_players}")
+                pprint(f"player played\t{str(pc)}")
+                p1_cards, oc = get_opponent_input(p1_cards, pc)
+                pprint(f"opponent played\t{str(oc)}")
                 lead_suit = pc.suit
             else:
-                oc = get_opponent_input()
+                p1_cards, oc = get_opponent_input(p1_cards)
                 display_card(oc, draw_trump=True)
-                pc = get_player_input(oc)
-                print(f"player played\t{str(pc)}")
+                if num_players == 1:
+                    p0_cards, pc = get_player_input(p0_cards, oc)
+                elif num_players == 0:
+                    p0_cards, pc = get_opponent_input(p0_cards, oc)
+                else:
+                    pprint(f"invalid num players: {num_players}")
+                pprint(f"player played\t{str(pc)}")
                 lead_suit = oc.suit
             # if one of the players broke trump suit
             if (oc.suit == trump_suit or pc.suit == trump_suit) and not broken:
-                print("***************************")
-                print("* BROKEN in battle round! *")
-                print("***************************")
+                pprint("***************************")
+                pprint("* BROKEN in battle round! *")
+                pprint("***************************")
                 broken = True
             # get winner
             if did_player_win(pc, oc, lead_suit):
-                print("player won a point")
+                pprint("player won a point")
                 turn = 0
                 player_pts += 1
                 # print(f"opp got {str(new_card)}") # debug
             else:
-                print("opponent won a point")
+                pprint("opponent won a point")
                 turn = 1
                 opp_pts += 1
                 # print(f"opp won {str(card)}") # debug
-            print("")
+            pprint("")
 
+def main():
+    global num_players
+    parser = argparse.ArgumentParser(description='German whist, 0 or 1 player')
+    parser.add_argument('num_players', type=str, help='number of players')
+    parser.add_argument('num_games', type=str, help='number of games')
+    #parser.add_argument('-v', '--verbose', action='store_true', help='Increase output verbosity')
+    args = parser.parse_args()
+    #if args.verbose:
+    #print(f"{args.num_players}")
+    num_players = int(args.num_players)
+    num_games = int(args.num_games)
+    games_won = 0
+    lost = 0
+    for g in range(num_games):
+        won = play()
+        if won:
+            games_won += 1
+        else:
+            lost += 1
+    print(games_won)
+    print(lost)
 
 if __name__ == '__main__':
     main()
