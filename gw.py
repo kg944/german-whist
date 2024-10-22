@@ -61,6 +61,7 @@ def deal_cards():
 
 # positive when c1 > c2
 # if diff suit compare on suit 'value' otherwise card val
+# (used for displaying cards in hand)
 def visual_compare(c1, c2):
     if c1.suit != c2.suit:
         return c1.suit.value - c2.suit.value
@@ -149,7 +150,7 @@ def get_player_input(cards, card = None):
     while selection is None or selection not in valid_indicies:
         selection = int(input("choose a card:"))
     selected = cards[int(selection)]
-    cards = p0_cards[0:int(selection)] + p0_cards[int(selection)+1:]
+    cards = cards[0:int(selection)] + p0_cards[int(selection)+1:]
     return cards, selected
 
 # true if pc beats oc

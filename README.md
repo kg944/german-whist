@@ -3,10 +3,11 @@ This is a python cli version of the two player game, [German Whist](https://en.w
 
 ## Tasks
 ### In Progress
+1. unit tests
 
 ### TODO
-1. support bots playing each other
-1. unit tests
+1. switch to API model
+ - use this code as basis for a server in order to host games on a website
 
 ### Done
 1. card object
@@ -21,6 +22,7 @@ This is a python cli version of the two player game, [German Whist](https://en.w
 1. add battle stage logic
 1. fix Ace ranking
 1. update UI to look like a card game
+1. support bots playing each other
 
 ## AI
 A longer term goal would be to experiment with various AI improvements and pit each version against each other to compare the improvements of each, in order to judge the effectiveness of each addition -- this is inspired by [Sebastion Lague's](https://github.com/seblague) video creating [chess bots](https://youtu.be/_vqlIPDR2TU?t=2743). 
