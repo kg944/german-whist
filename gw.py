@@ -134,24 +134,26 @@ def draw_card(card):
     print(f"\nCard on pile: {str(card)}")
 
 def get_opponent_input(cards, card = None):
-    valid_indicies = get_valid_indicies(cards, card)
+    cards_copy = cards.copy()
+    valid_indicies = get_valid_indicies(cards_copy, card)
     # for now just pick a random valid move
     index = r.randrange(len(valid_indicies))
-    card_to_play = cards[valid_indicies[index]]
-    cards = cards[0:index] + cards[index+1:]
-    return cards, card_to_play
+    card_to_play = cards_copy[valid_indicies[index]]
+    cards_copy = cards_copy[0:index] + cards_copy[index+1:]
+    return cards_copy, card_to_play
 
 
 def get_player_input(cards, card = None):
-    cards = print_hand_2(cards)
-    valid_indicies = get_valid_indicies(cards, card)
+    cards_copy = cards.copy()
+    cards_copy = print_hand_2(cards_copy)
+    valid_indicies = get_valid_indicies(cards_copy, card)
     selection = None
     # keep geting input until its valid
     while selection is None or selection not in valid_indicies:
         selection = int(input("choose a card:"))
-    selected = cards[int(selection)]
-    cards = cards[0:int(selection)] + p0_cards[int(selection)+1:]
-    return cards, selected
+    selected = cards_copy[int(selection)]
+    cards_copy = cards_copy[0:int(selection)] + cards_copy[int(selection)+1:]
+    return cards_copy, selected
 
 # true if pc beats oc
 def did_player_win(pc, oc, lead_suit):
