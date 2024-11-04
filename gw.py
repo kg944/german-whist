@@ -138,8 +138,20 @@ def get_opponent_input(cards, card = None):
     valid_indicies = get_valid_indicies(cards_copy, card)
     # for now just pick a random valid move
     index = r.randrange(len(valid_indicies))
-    card_to_play = cards_copy[valid_indicies[index]]
-    cards_copy = cards_copy[0:index] + cards_copy[index+1:]
+    vi_index = valid_indicies[index]
+    print(valid_indicies)
+    card_to_play = cards_copy[vi_index]
+    cards_copy = cards_copy[0:vi_index] + cards_copy[vi_index+1:]
+    if card_to_play in cards_copy:
+        print("error")
+        print(index)
+        print(vi_index)
+        print(card_to_play)
+        print('---')
+        for c in cards_copy:
+            print(c)
+        print(len(cards_copy))
+        exit()
     return cards_copy, card_to_play
 
 
@@ -208,7 +220,8 @@ def play():
     won = False
     turn = 0 # 0 p0, 1 p1
     # randomly select 
-    turn = r.randrange(2)
+    # turn = r.randrange(2)
+    turn = 1
     start_game()
     player_pts = 0
     global stage
