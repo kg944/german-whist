@@ -124,6 +124,8 @@ def get_valid_indicies(hand, card_on_table = None):
 3. deal cards to players
 """
 def start_game():
+    global deck
+    deck = []
     for suit in list(Suit):
         for v in range(13):
             deck.append(Card(suit, v + 1))
